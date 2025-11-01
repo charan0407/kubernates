@@ -1,0 +1,74 @@
+# mongo  or mongosh --> if we use githbash
+# # Initiate mongod db reple set and add members
+
+# rs.initiate( { _id: "MainRepSet", version: 1,
+# members: [ 
+#  { _id: 0, host: "mongod-0.mongodb-service.test-ns.svc.cluster.local:27017" }, 
+#  { _id: 1, host: "mongod-1.mongodb-service.test-ns.svc.cluster.local:27017" }, 
+#  { _id: 2, host: "mongod-2.mongodb-service.test-ns.svc.cluster.local:27017" } ] } );
+ 
+# # Create root user name and password 
+# db.getSiblingDB("admin").createUser( {user : "devdb",pwd  : "devdb123",roles: [ { role: "root", db: "admin" } ] } ); 	
+
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mongod
+spec:
+  serviceName: mongodb-service
+  # podManagementPolicy: Parallel
+  replicas: 3
+  selector:
+    matchLabels:
+      app: mongo
+  template:
+    metadata:
+      labels:
+        app: mongo
+    spec:
+      terminationGracePeriodSeconds: 10
+      containers:
+        - name: mongod-container
+          image: mongo
+          command:
+            - "mongod"
+            - "--bind_ip"
+            - "0.0.0.0"
+            - "--replSet"
+            - "MainRepSet"
+          resources:
+            requests:
+              cpu: 200m
+              memory: 200Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          ports:
+            - containerPort: 27017
+          volumeMounts:
+            - name: mongodb-persistent-storage-claim
+              mountPath: /data/db
+  volumeClaimTemplates:
+  - metadata:
+      name: mongodb-persistent-storage-claim
+    spec:
+      storageClassName: azurefile
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb-service
+  labels:
+    name: mongo
+spec:
+  ports:
+  - port: 27017
+    targetPort: 27017
+  clusterIP: None
+  selector:
+    app: mongo

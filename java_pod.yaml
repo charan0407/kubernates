@@ -9,7 +9,7 @@ spec:
      app: javawebapp
   ports:
   - name: java  # just identification purpose not needed 
-    nodePort: 32558
+#    nodePort: 32558
     port: 80
     targetPort: 8080
 ---
